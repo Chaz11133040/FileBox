@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="/styles.css" />
+    <script>
+        // Function to fetch and display the list of files for all users
+        function loadFiles() {
+            fetch('/admin/files')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! Status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(fileGroups => {
+                    console.log('Fetched file groups:', fileGroups); // Debugging line
+    
+                    const fileList = document.getElementById('fileList');
+                    fileList.innerHTML = '';  // Clear the list
+    
+                    // Check if the response data is in expected format
+                    if (!Array.isArray(fileGroups)) {
+                        console.error('Unexpected data format:', fileGroups);
+                        return;
+                    }
+    
+                    // Group files by user
+                    const userFiles = fileGroups.reduce((acc, { userDir, file }) => {
+                        if (!acc[userDir]) acc[userDir] = [];
+                        acc[userDir].push(file);
+                        return acc;
+                    }, {});
+    
+                    // Event handler for logout
+        function handleLogout() {
+          fetch('/logout', { method: 'GET' })
+          .then(response => {
+            if (response.ok) {
+                window.location.href = '/login'; // Redirect to login page
+            } else {
+                alert('Failed to log out.');
+            }
+        })
+        .catch(err => {
+            console.error('Error logging out:', err);
+            alert('Failed to log out.');
+        });
+}
+                    // Create list for each user
+                    for (const [userDir, files] of Object.entries(userFiles)) {
+                        const userSection = document.createElement('div');
+                        userSection.innerHTML = `<h2>${userDir}</h2>`;
+                        
+                        const fileUl = document.createElement('ul');
+                        files.forEach(file => {
+                            const listItem = document.createElement('li');
+                            
+                            // Create download link
+                            const link = document.createElement('a');
+                            link.href = `/uploads/${userDir}/${file}`;
+                            link.textContent = file;
+                            link.download = file;
+                            
+                            // Create delete button
+                            const deleteButton = document.createElement('button');
+                            deleteButton.textContent = 'Delete';
+                            deleteButton.classList.add('secondary'); // Add the secondary class
+                            deleteButton.onclick = () => deleteFile(userDir, file);
+                            
+                            listItem.appendChild(link);
+                            listItem.appendChild(deleteButton);
+                            fileUl.appendChild(listItem);
+                        });
+                        
+                        userSection.appendChild(fileUl);
+                        fileList.appendChild(userSection);
+                    }
+                })
+                .catch(err => {
+                    console.error('Error fetching files:', err);
+                });
+        }
+    
+        // Function to delete a file
+        function deleteFile(userDir, fileName) {
+            fetch(`/admin/delete/${userDir}/${fileName}`, { method: 'DELETE' })
+                .then(response => {
+                    if (response.ok) {
+                        loadFiles();  // Reload the file list after deletion
+                    } else {
+                        alert('Failed to delete file.');
+                    }
+                })
+                .catch(err => {
+                    console.error('Error deleting file:', err);
+                });
+        }
+                // Redirect to logout when button is clicked
+                function handleLogout() {
+            window.location.href = '/logout';
+        }
+    
+        // Load files when the page is loaded
+        window.onload = loadFiles;
+    </script>
+    
+</head>
+<body>
+    <h1>Admin Homepage</h1>
+    <button class="primary" onclick="handleLogout()">Logout</button>
+    <h2>Users:</h2>
+    <div id="fileList">
+      <!-- File lists will be dynamically loaded here -->
+    </div>
+</body>
+</html>

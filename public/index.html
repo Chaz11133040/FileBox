@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link rel="stylesheet" href="/styles.css" />
+    <script>
+        // Function to fetch and display the list of files
+        function loadFiles() {
+            fetch('/files')
+                .then(response => response.json())
+                .then(files => {
+                    const fileList = document.getElementById('fileList');
+                    fileList.innerHTML = '';  // Clear the list
+                    files.forEach(file => {
+                        const listItem = document.createElement('li');
+                        
+                        // Create download link
+                        const link = document.createElement('a');
+                        link.href = `/uploads/${window.username}/${file}`; // Ensure this path is correct
+                        link.textContent = file;
+                        link.download = file;
+
+                        // Create delete button
+                        const deleteButton = document.createElement('button');
+                        deleteButton.textContent = 'Delete';
+                        deleteButton.classList.add('secondary'); // Add the secondary class
+                        deleteButton.onclick = () => deleteFile(file);  // Call delete function when clicked
+
+                        listItem.appendChild(link);
+                        listItem.appendChild(deleteButton);
+                        fileList.appendChild(listItem);
+                    });
+                })
+                .catch(err => console.error('Error fetching files:', err));
+        }
+
+        // Function to delete a file
+        function deleteFile(fileName) {
+            fetch(`/delete/${fileName}`, { method: 'DELETE' })
+                .then(response => {
+                    if (response.ok) {
+                        loadFiles();  // Reload the file list after deletion
+                    } else {
+                        alert('Failed to delete file.');
+                    }
+                })
+                .catch(err => console.error('Error deleting file:', err));
+        }
+
+        // Function to handle file upload with two progress bars
+        function uploadFile(file) {
+            const formData = new FormData();
+            formData.append('uploadFile', file);
+
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', '/upload', true);
+
+            // Event listener for upload progress
+            xhr.upload.onprogress = function (event) {
+                if (event.lengthComputable) {
+                    const percentComplete = (event.loaded / event.total) * 100;
+                    document.getElementById('uploadProgressBar').value = percentComplete;
+                    document.getElementById('uploadProgressText').textContent = 'Uploading: ' + Math.round(percentComplete) + '%';
+                }
+            };
+
+            // When upload starts
+            xhr.upload.onloadstart = function () {
+                document.getElementById('uploadProgressContainer').style.display = 'block';
+                document.getElementById('compressionProgressContainer').style.display = 'none';
+                document.getElementById('uploadProgressText').textContent = 'Uploading: 0%';
+            };
+
+            // On upload completion, begin compression process
+            xhr.onload = function () {
+                if (xhr.status === 200) {
+                    document.getElementById('uploadProgressContainer').style.display = 'none';
+                    document.getElementById('compressionProgressContainer').style.display = 'block';
+                    document.getElementById('compressionProgressText').textContent = 'Compressing: 0%';
+                    checkCompressionStatus();
+                } else {
+                    alert('Failed to upload file.');
+                }
+            };
+
+            // Send the file
+            xhr.send(formData);
+        }
+
+        // Function to check compression status with progress updates
+        function checkCompressionStatus() {
+            const compressionCheckInterval = setInterval(() => {
+                fetch('/compression-status')
+                    .then(response => response.json())
+                    .then(data => {
+                        const percentComplete = data.progress || 0;
+                        document.getElementById('compressionProgressBar').value = percentComplete;
+                        document.getElementById('compressionProgressText').textContent = 'Compressing: ' + Math.round(percentComplete) + '%';
+
+                        if (data.status === 'complete') {
+                            clearInterval(compressionCheckInterval);
+                            document.getElementById('compressionProgressContainer').style.display = 'none';
+                            loadFiles();
+                            alert('File uploaded and compressed successfully.');
+                        }
+                    })
+                    .catch(err => console.error('Error checking compression status:', err));
+            }, 1000);  // Check every second
+        }
+
+        // Function to handle logout
+        function handleLogout() {
+            fetch('/logout', { method: 'GET' })
+                .then(response => {
+                    if (response.ok) {
+                        window.location.href = '/login'; // Redirect to login page
+                    } else {
+                        alert('Failed to log out.');
+                    }
+                })
+                .catch(err => {
+                    console.error('Error logging out:', err);
+                    alert('Failed to log out.');
+                });
+        }
+
+        // Load files and user info when the page is loaded
+        window.onload = () => {
+            // Fetch user info and then load files
+            fetch("/user-info")
+                .then(response => response.json())
+                .then(data => {
+                    window.username = data.username; // Store username globally for file paths
+                    const userInfoDiv = document.getElementById("user-info");
+                    userInfoDiv.innerHTML = `<p>Logged in as ${data.userType} ${data.username}</p>`;
+                    
+                    loadFiles(); // Load files after username is set
+                })
+                .catch(error => {
+                    console.error('Error fetching user info:', error);
+                });
+
+            // Set up file input event listener
+            const fileInput = document.getElementById('fileInput');
+            fileInput.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    uploadFile(file);
+                }
+            });
+        };
+    </script>
+</head>
+<body>
+    <h1>Welcome to the File Upload App</h1>
+    <!-- This section will display the user's username and user type -->
+    <div id="user-info">
+        <p id="username">Loading...</p>
+    </div>
+
+    <button class="primary" onclick="handleLogout()">Logout</button>
+    
+    <h2>Upload a new file:</h2>
+    <input type="file" id="fileInput" style="display: none;" />
+    <button id="uploadButton" class="primary" onclick="document.getElementById('fileInput').click();">Upload!</button>
+
+    <!-- Upload progress bar -->
+    <div id="uploadProgressContainer" style="display: none;">
+        <h3>Upload Progress:</h3>
+        <progress id="uploadProgressBar" value="0" max="100"></progress>
+        <span id="uploadProgressText">0%</span>
+    </div>
+
+    <!-- Compression progress bar -->
+    <div id="compressionProgressContainer" style="display: none;">
+        <h3>Compression Progress:</h3>
+        <progress id="compressionProgressBar" value="0" max="100"></progress>
+        <span id="compressionProgressText">0%</span>
+    </div>
+
+    <h2>File Box:</h2>
+    <ul id="fileList">
+      <!-- File links will be dynamically loaded here -->
+    </ul>
+</body>
+</html>
