@@ -1,9 +1,12 @@
 const express = require("express");
 const router = express.Router();
 const auth = require("../auth.js");
+const seven = require('7zip-min');
 const path = require("path");
 const fs = require("fs");
-const pako = require('pako');
+
+
+
 
 const uploadsFolder = path.join(__dirname, '../uploads');
 let compressionProgress = {};
@@ -85,9 +88,10 @@ router.delete("/delete/:fileName", auth.authenticateCookie, (req, res) => {
 });
 
 router.get("/compression-status", auth.authenticateCookie, (req, res) => {
-  const username = req.user.username;
-  res.json(compressionProgress[username] || { status: 'not started', progress: 0 });
-});
+    const username = req.user.username;
+    res.json(compressionProgress[username] || { status: 'not started', progress: 0 });
+  });
+  
 
 // Admin routes
 router.get("/admin", auth.authenticateCookie, (req, res) => {
@@ -165,48 +169,35 @@ function ensureUserDir(username) {
   return userDir;
 }
 
+
 function startCompression(filePath, username) {
+  console.log(`Starting compression for file: ${filePath}`);
   compressionProgress[username] = { status: 'in progress', progress: 0 };
 
-  fs.readFile(filePath, (err, data) => {
-    if (err) {
-      console.error("Error reading file for compression:", err);
-      compressionProgress[username] = { status: 'error', progress: 0 };
-      return;
-    }
+  const compressedFilePath = filePath + '.7z';
 
-    let progress = 0;
-    const interval = setInterval(() => {
-      progress += 10;
-      compressionProgress[username] = { status: 'in progress', progress: progress };
-
-      if (progress >= 100) {
-        clearInterval(interval);
-        
-        try {
-          const compressedData = pako.deflate(data, { level: 9 });
-          const compressedFilePath = filePath + '.gz';
-
-          fs.writeFile(compressedFilePath, compressedData, (err) => {
-            if (err) {
-              console.error("Error writing compressed file:", err);
-              compressionProgress[username] = { status: 'error', progress: 100 };
-            } else {
-              compressionProgress[username] = { status: 'complete', progress: 100 };
-              
-              fs.unlink(filePath, (err) => {
-                if (err) console.error('Error deleting original file:', err);
-              });
-            }
-          });
-        } catch (err) {
-          console.error("Error during compression:", err);
-          compressionProgress[username] = { status: 'error', progress: 100 };
-        }
+  try {
+    seven.pack(filePath, compressedFilePath, (err) => {
+      if (err) {
+        console.error(`Compression error: ${err}`);
+        compressionProgress[username] = { status: 'error', progress: 100 };
+        return;
       }
-    }, 500);
-  });
+
+      compressionProgress[username] = { status: 'complete', progress: 100 };
+      console.log(`Compression complete for file: ${compressedFilePath}`);
+
+      // Optionally delete the original file after compression
+      fs.unlink(filePath, (err) => {
+        if (err) console.error(`Error deleting original file: ${err}`);
+      });
+    });
+  } catch (error) {
+    console.error(`Error starting compression: ${error}`);
+    compressionProgress[username] = { status: 'error', progress: 100 };
+  }
 }
+
 
 // Serve static files
 router.use("/", auth.authenticateCookie, express.static(path.join(__dirname, "../public")));

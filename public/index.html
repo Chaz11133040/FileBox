@@ -46,7 +46,7 @@
                 .catch(err => console.error('Error deleting file:', err));
         }
 
-        // Function to handle file upload with two progress bars
+        // Function to handle file upload with progress bar
         function uploadFile(file) {
             const formData = new FormData();
             formData.append('uploadFile', file);
@@ -66,16 +66,16 @@
             // When upload starts
             xhr.upload.onloadstart = function () {
                 document.getElementById('uploadProgressContainer').style.display = 'block';
-                document.getElementById('compressionProgressContainer').style.display = 'none';
+                document.getElementById('compressionMessageContainer').style.display = 'none';
                 document.getElementById('uploadProgressText').textContent = 'Uploading: 0%';
             };
 
-            // On upload completion, begin compression process
+            // On upload completion
             xhr.onload = function () {
                 if (xhr.status === 200) {
                     document.getElementById('uploadProgressContainer').style.display = 'none';
-                    document.getElementById('compressionProgressContainer').style.display = 'block';
-                    document.getElementById('compressionProgressText').textContent = 'Compressing: 0%';
+                    document.getElementById('compressionMessageContainer').style.display = 'block';
+                    startDotsAnimation();
                     checkCompressionStatus();
                 } else {
                     alert('Failed to upload file.');
@@ -86,19 +86,25 @@
             xhr.send(formData);
         }
 
-        // Function to check compression status with progress updates
+        // Function to start the dots animation
+        function startDotsAnimation() {
+            const messageElement = document.getElementById('compressionMessageText');
+            let dotCount = 0;
+            setInterval(() => {
+                dotCount = (dotCount + 1) % 4;
+                messageElement.textContent = 'Please wait' + '.'.repeat(dotCount);
+            }, 500);
+        }
+
+        // Function to check compression status
         function checkCompressionStatus() {
             const compressionCheckInterval = setInterval(() => {
                 fetch('/compression-status')
                     .then(response => response.json())
                     .then(data => {
-                        const percentComplete = data.progress || 0;
-                        document.getElementById('compressionProgressBar').value = percentComplete;
-                        document.getElementById('compressionProgressText').textContent = 'Compressing: ' + Math.round(percentComplete) + '%';
-
                         if (data.status === 'complete') {
                             clearInterval(compressionCheckInterval);
-                            document.getElementById('compressionProgressContainer').style.display = 'none';
+                            document.getElementById('compressionMessageContainer').style.display = 'none';
                             loadFiles();
                             alert('File uploaded and compressed successfully.');
                         }
@@ -152,7 +158,6 @@
 </head>
 <body>
     <h1>Welcome to the File Upload App</h1>
-    <!-- This section will display the user's username and user type -->
     <div id="user-info">
         <p id="username">Loading...</p>
     </div>
@@ -170,11 +175,11 @@
         <span id="uploadProgressText">0%</span>
     </div>
 
-    <!-- Compression progress bar -->
-    <div id="compressionProgressContainer" style="display: none;">
-        <h3>Compression Progress:</h3>
-        <progress id="compressionProgressBar" value="0" max="100"></progress>
-        <span id="compressionProgressText">0%</span>
+    <!-- Compression message with animated dots -->
+    <div id="compressionMessageContainer" style="display: none;">
+        <h3>Compression Status:</h3>
+        <p>Now compressing, this may take some time</p>
+        <span id="compressionMessageText">Please wait</span>
     </div>
 
     <h2>File Box:</h2>

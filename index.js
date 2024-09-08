@@ -2,7 +2,7 @@ const express = require("express");
 const cookieParser = require("cookie-parser");
 const fileUpload = require("express-fileupload");
 const path = require("path");
-const webclient = require("./routes/webclient");
+const webclientRoutes = require("./routes/webclient");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -11,19 +11,20 @@ const PORT = process.env.PORT || 3000;
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-app.use(express.static(path.join(__dirname, "public")));
-
 // Use cookie parser middleware
 app.use(cookieParser());
 
 // Middleware to handle file uploads (express-fileupload)
 app.use(fileUpload());
 
+// Serve static files from the public directory
+app.use(express.static(path.join(__dirname, "public")));
+
 // Serve static files from the uploads directory
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Set routes
-app.use("/", webclient);
+app.use("/", webclientRoutes); // Web client routes
 
 // Start the server
 app.listen(PORT, () => {

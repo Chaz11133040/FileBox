@@ -138,3 +138,22 @@ progress {
   display: block;
   margin-top: 0.5rem;
 }
+
+/* Compression message container styling */
+#compressionMessageContainer {
+  margin: 1rem 0;
+}
+
+/* Animation for the dots */
+#compressionMessage {
+  display: inline-block;
+  font-weight: bold;
+  font-size: 1.2rem;
+  animation: dot-blink 1.5s infinite;
+}
+
+@keyframes dot-blink {
+  0% { opacity: 1; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1; }
+}

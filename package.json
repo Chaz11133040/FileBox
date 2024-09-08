@@ -10,6 +10,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "7zip-bin": "^5.2.0",
+    "7zip-min": "^1.4.5",
     "archiver": "^7.0.1",
     "cookie-parser": "^1.4.6",
     "express": "^4.19.2",
@@ -17,6 +19,7 @@
     "jsonwebtoken": "^9.0.2",
     "lzma-native": "^8.0.6",
     "multer": "^1.4.5-lts.1",
+    "node-7z": "^3.0.0",
     "pako": "^2.1.0",
     "zlib": "^1.0.5"
   }
